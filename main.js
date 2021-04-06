@@ -130,22 +130,34 @@ image.onload = () => {
   //7. Initial Rendering
   gl.useProgram(my_program);
 
+  //7-1. pass vertex position attribute data to vertex shader
   const loc_a_position = gl.getAttribLocation(my_program, "a_position");
   gl.enableVertexAttribArray(loc_a_position);
   gl.bindBuffer(gl.ARRAY_BUFFER, buf_a_position);
   gl.vertexAttribPointer(loc_a_position, 2, gl.FLOAT, false, 0, 0);
 
+  //7-2. pass tex coord attribute data to vertex shader
   const loc_a_tex_coord = gl.getAttribLocation(my_program, "a_tex_coord");
   gl.enableVertexAttribArray(loc_a_tex_coord);
   gl.bindBuffer(gl.ARRAY_BUFFER, buf_a_tex_coord);
   gl.vertexAttribPointer(loc_a_tex_coord, 2, gl.FLOAT, false, 0, 0);
 
+  //7-3. pass uniform value to fragment shader
   const loc_u_brightness = gl.getUniformLocation(my_program, "u_brightness");
   gl.uniform1f(loc_u_brightness, 1.0);
 
+  //7-4 pass texture values to fragment shader
   gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
 
+  //7-5 setting viewport of the canvas
   gl.viewport(0, 0, width, height);
 
+  //7-6 render
   gl.drawArrays(gl.TRIANGLES, 0, 6);
+
+  //8. event register
+  slider_gl.addEventListener("input", (e) => {
+    const val = Number(e.currentTarget.value) + 1;
+    gl.uniform1f(loc_u_brightness, val);
+  });
 };

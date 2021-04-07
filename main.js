@@ -35,8 +35,6 @@ image.onload = () => {
       //1. 정밀도 선언
       precision mediump float;
       //2. uniform 값으로 brightness 변수 데이터 선언
-      uniform float u_brightness;
-      //3. 이미지 텍스쳐를 샘플링 할 변수 선언
       uniform sampler2D u_image;
       //4. 선형 보간 된 텍스쳐 좌표값
       varying vec2 v_tex_coord;
@@ -44,7 +42,7 @@ image.onload = () => {
         //이미지 rgba값 샘플링
         vec4 image = texture2D(u_image, v_tex_coord);
         //rgb 값에 brightness 변수 값을 곱해서 조정, alpha값은 원본 이미지 값 그대로 사용
-        gl_FragColor = vec4(image.rgb * u_brightness, image.a);
+        gl_FragColor = vec4(image.rgb, image.a);
     }
   `;
 

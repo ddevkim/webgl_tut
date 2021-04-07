@@ -1,50 +1,13 @@
 import { getIdx, compileShader, linkProgram } from "./util.js";
 
-const canvas_2d = document.getElementById("2d_canvas");
-const canvas_gl = document.getElementById("webgl_canvas");
-const slider_2d = document.getElementById("2d_slider");
+const gl = document.getElementById("webgl_canvas").getContext("webgl");
 const slider_gl = document.getElementById("webgl_slider");
-
-const ctx_2d = canvas_2d.getContext("2d");
-const gl = canvas_gl.getContext("webgl");
 
 const image = new Image();
 image.src = "lake.jpg";
 image.onload = () => {
   const width = image.width;
   const height = image.height;
-
-  ////////////////////////////////////
-  // image processing for 2d canvas //
-  ////////////////////////////////////
-
-  //1. 이미지를 캔버스에 그림
-  ctx_2d.drawImage(image, 0, 0, width, height);
-
-  //2. 픽셀 데이터 배열을 로드
-  const pixel_arr = ctx_2d.getImageData(0, 0, width, height).data;
-
-  //3. 동일한 길이의 새로운 픽셀 데이터 배열을 생성 (기존 배열을 치환하지 않고 보존하기 위함)
-  const proc_pixel_arr = new Uint8ClampedArray(pixel_arr.length);
-
-  //4. 슬라이더 이벤트 등록
-  slider_2d.addEventListener("input", (e) => {
-    const val = Number(e.currentTarget.value) + 1;
-
-    //5. input 이벤트: 모든 픽셀을 순회하면서 기존 픽셀 RGB값에 value 만큼 곱한 값을 새로운 배열에 반환.
-    for (let j = 0; j < height; j++) {
-      for (let i = 0; i < width; i++) {
-        const idx = getIdx(i, j, width);
-        proc_pixel_arr[idx] = pixel_arr[idx] * val;
-        proc_pixel_arr[idx + 1] = pixel_arr[idx + 1] * val;
-        proc_pixel_arr[idx + 2] = pixel_arr[idx + 2] * val;
-        proc_pixel_arr[idx + 3] = pixel_arr[idx + 3];
-      }
-    }
-
-    //6. 프로세싱 후 새로운 픽셀 배열을 다시 캔버스에 그림
-    ctx_2d.putImageData(new ImageData(proc_pixel_arr, width, height), 0, 0);
-  });
 
   ///////////////////////////////////////
   // image processing for webGL canvas //
@@ -54,39 +17,27 @@ image.onload = () => {
 
   //language="glsl"
   const vertex_shader_src = `
-      //1. 소수 정밀도 선언
     precision mediump float;
-      //2. vertex shader가 삼각형을 그릴 포지션 데이터 선언
     attribute vec2 a_position;
-      //3. 텍스쳐 좌표 데이터 선언
     attribute vec2 a_tex_coord;
-      //4. fragment shader로 넘길 텍스쳐 좌표 데이터 선언
     varying vec2 v_tex_coord;
-      //5. vertex shader의 main 실행 함수
     void main() {
-        //삼각형 포지션을 웹 상에서 css 좌표계로 다루는 게 편해서 a_position값은 css 좌표계 값으로 사용
-        //glsl의 clipspace는 중앙에 origin이 있는 수학 좌표계를 사용
-        //css 좌표계 ==> glsl clipspace 좌표계로 변환 수식 작성
         gl_Position = vec4(((a_position * 2.0) - 1.0) * vec2(1.0, -1.0), 0, 1);
-        //텍스쳐 좌표를 varying 변수로 fragment shader로 넘김
         v_tex_coord = a_tex_coord;
     }
   `;
   //language="glsl"
   const fragment_shader_src = `
-      //1. 정밀도 선언
       precision mediump float;
-      //2. uniform 값으로 brightness 변수 데이터 선언
-      uniform float u_brightness;
-      //3. 이미지 텍스쳐를 샘플링 할 변수 선언
+      uniform mat4 u_mat_brightness;
+      uniform vec4 u_vec_brightness;
       uniform sampler2D u_image;
-      //4. 선형 보간 된 텍스쳐 좌표값
       varying vec2 v_tex_coord;
     void main() {
-        //이미지 rgba값 샘플링
         vec4 image = texture2D(u_image, v_tex_coord);
-        //rgb 값에 brightness 변수 값을 곱해서 조정, alpha값은 원본 이미지 값 그대로 사용
-        gl_FragColor = vec4(image.rgb * u_brightness, image.a);
+        
+        //matrix 연산
+        gl_FragColor = vec4(u_mat_brightness * image + u_vec_brightness);
     }
   `;
 
@@ -140,12 +91,40 @@ image.onload = () => {
   gl.bindBuffer(gl.ARRAY_BUFFER, buf_a_tex_coord);
   gl.vertexAttribPointer(loc_a_tex_coord, 2, gl.FLOAT, false, 0, 0);
 
-  const loc_u_brightness = gl.getUniformLocation(my_program, "u_brightness");
-  gl.uniform1f(loc_u_brightness, 1.0);
+  const loc_u_mat_brightness = gl.getUniformLocation(
+    my_program,
+    "u_mat_brightness"
+  );
+  const loc_u_vec_brightness = gl.getUniformLocation(
+    my_program,
+    "u_vec_brightness"
+  );
+
+  //prettier-ignore
+  const get_brightness_mat = (str) => {
+    return new Float32Array([
+      1 + str, 0, 0, 0,
+      0, 1 + str, 0, 0,
+      0, 0, 1 + str, 0,
+      0, 0, 0, 1,
+    ]);
+  }
+
+  const mat_brightness_mul = get_brightness_mat(0.0);
+  const vec_brightness_offset = new Float32Array([0, 0, 0, 0]);
+
+  gl.uniformMatrix4fv(loc_u_mat_brightness, false, mat_brightness_mul);
+  gl.uniform4fv(loc_u_vec_brightness, vec_brightness_offset);
 
   gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
 
   gl.viewport(0, 0, width, height);
 
   gl.drawArrays(gl.TRIANGLES, 0, 6);
+
+  slider_gl.addEventListener("input", (e) => {
+    const str = Number(e.currentTarget.value);
+    gl.uniformMatrix4fv(loc_u_mat_brightness, false, get_brightness_mat(str));
+    gl.drawArrays(gl.TRIANGLES, 0, 6);
+  });
 };

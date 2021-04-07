@@ -11,8 +11,11 @@ div {
   height: auto;
   background-color: #ececec;
 }
+label {
+  margin-top: 15px;
+}
 input {
-  margin: 30px;
+  margin: 20px;
   width: 80%
 }
 canvas {

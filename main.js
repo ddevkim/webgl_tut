@@ -37,7 +37,7 @@ image.onload = () => {
         vec4 image = texture2D(u_image, v_tex_coord);
         
         //matrix 연산
-        gl_FragColor = vec4(u_mat_contrast * image + u_vec_contrast);
+        gl_FragColor = vec4(image * u_mat_contrast + u_vec_contrast);
     }
   `;
 

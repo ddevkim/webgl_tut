@@ -29,15 +29,15 @@ image.onload = () => {
   //language="glsl"
   const fragment_shader_src = `
       precision mediump float;
-      uniform mat4 u_mat_brightness;
-      uniform vec4 u_vec_brightness;
+      uniform mat4 u_mat_warmth;
+      uniform vec4 u_vec_warmth;
       uniform sampler2D u_image;
       varying vec2 v_tex_coord;
     void main() {
         vec4 image = texture2D(u_image, v_tex_coord);
         
         //matrix 연산
-        gl_FragColor = vec4(u_mat_brightness * image + u_vec_brightness);
+        gl_FragColor = vec4(u_mat_warmth * image + u_vec_warmth);
     }
   `;
 
@@ -91,30 +91,25 @@ image.onload = () => {
   gl.bindBuffer(gl.ARRAY_BUFFER, buf_a_tex_coord);
   gl.vertexAttribPointer(loc_a_tex_coord, 2, gl.FLOAT, false, 0, 0);
 
-  const loc_u_mat_brightness = gl.getUniformLocation(
-    my_program,
-    "u_mat_brightness"
-  );
-  const loc_u_vec_brightness = gl.getUniformLocation(
-    my_program,
-    "u_vec_brightness"
-  );
+  const loc_u_mat_warmth = gl.getUniformLocation(my_program, "u_mat_warmth");
+  const loc_u_vec_warmth = gl.getUniformLocation(my_program, "u_vec_warmth");
 
   //prettier-ignore
-  const get_brightness_mat = (str) => {
+  const get_warmth_mat = (str) => {
+    str /= 2.0;
     return new Float32Array([
       1 + str, 0, 0, 0,
-      0, 1 + str, 0, 0,
-      0, 0, 1 + str, 0,
+      0, 1, 0, 0,
+      0, 0, 1 - str, 0,
       0, 0, 0, 1,
     ]);
   }
 
-  const mat_brightness_mul = get_brightness_mat(0.0);
-  const vec_brightness_offset = new Float32Array([0, 0, 0, 0]);
+  const mat_warmth_mul = get_warmth_mat(0.0);
+  const vec_warmth_offset = new Float32Array([0, 0, 0, 0]);
 
-  gl.uniformMatrix4fv(loc_u_mat_brightness, false, mat_brightness_mul);
-  gl.uniform4fv(loc_u_vec_brightness, vec_brightness_offset);
+  gl.uniformMatrix4fv(loc_u_mat_warmth, false, mat_warmth_mul);
+  gl.uniform4fv(loc_u_vec_warmth, vec_warmth_offset);
 
   gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
 
@@ -124,7 +119,7 @@ image.onload = () => {
 
   slider_gl.addEventListener("input", (e) => {
     const str = Number(e.currentTarget.value);
-    gl.uniformMatrix4fv(loc_u_mat_brightness, false, get_brightness_mat(str));
+    gl.uniformMatrix4fv(loc_u_mat_warmth, false, get_warmth_mat(str));
     gl.drawArrays(gl.TRIANGLES, 0, 6);
   });
 };

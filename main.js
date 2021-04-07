@@ -1,6 +1,8 @@
 import { compileShader, linkProgram } from "./util.js";
 
 const gl = document.getElementById("webgl_canvas").getContext("webgl");
+const slider_offset_x_el = document.getElementById("x_offset");
+const slider_offset_y_el = document.getElementById("y_offset");
 
 const image = new Image();
 image.src = "lake.jpg";
@@ -12,39 +14,21 @@ image.onload = () => {
 
   //language="glsl"
   const vertex_shader_src = `
-      //1. 소수 정밀도 선언
     precision mediump float;
-      //2. vertex shader가 삼각형을 그릴 포지션 데이터 선언
     attribute vec2 a_position;
-      //3. 텍스쳐 좌표 데이터 선언
-    attribute vec2 a_tex_coord;
-      //4. fragment shader로 넘길 텍스쳐 좌표 데이터 선언
-    varying vec2 v_tex_coord;
-      //5. vertex shader의 main 실행 함수
+    
+    uniform float u_offset_x;
+    uniform float u_offset_y;
     void main() {
-        //삼각형 포지션을 웹 상에서 css 좌표계로 다루는 게 편해서 a_position값은 css 좌표계 값으로 사용
-        //glsl의 clipspace는 중앙에 origin이 있는 수학 좌표계를 사용
-        //css 좌표계 ==> glsl clipspace 좌표계로 변환 수식 작성
-        gl_Position = vec4(((a_position * 2.0) - 1.0) * vec2(1.0, -1.0), 0, 1);
-        //텍스쳐 좌표를 varying 변수로 fragment shader로 넘김
-        v_tex_coord = a_tex_coord;
+        vec2 offsets = vec2(u_offset_x, u_offset_y);
+        gl_Position = vec4(a_position + offsets, 0, 1);
     }
   `;
   //language="glsl"
   const fragment_shader_src = `
-      //1. 정밀도 선언
       precision mediump float;
-      //2. uniform 값으로 brightness 변수 데이터 선언
-      uniform float u_brightness;
-      //3. 이미지 텍스쳐를 샘플링 할 변수 선언
-      uniform sampler2D u_image;
-      //4. 선형 보간 된 텍스쳐 좌표값
-      varying vec2 v_tex_coord;
     void main() {
-        //이미지 rgba값 샘플링
-        vec4 image = texture2D(u_image, v_tex_coord);
-        //rgb 값에 brightness 변수 값을 곱해서 조정, alpha값은 원본 이미지 값 그대로 사용
-        gl_FragColor = vec4(image.rgb * u_brightness, image.a);
+        gl_FragColor = vec4(1.0, 0.0, 0.3, 1.0);
     }
   `;
 
@@ -66,26 +50,10 @@ image.onload = () => {
   gl.bindBuffer(gl.ARRAY_BUFFER, buf_a_position);
   gl.bufferData(
     gl.ARRAY_BUFFER,
-    new Float32Array([0, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1, 1]),
-    gl.STATIC_DRAW
-  );
-  const buf_a_tex_coord = gl.createBuffer();
-  gl.bindBuffer(gl.ARRAY_BUFFER, buf_a_tex_coord);
-  gl.bufferData(
-    gl.ARRAY_BUFFER,
-    new Float32Array([0, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1, 1]),
+    new Float32Array([0, 0.2, -0.3, -0.3, 0.3, -0.3]),
     gl.STATIC_DRAW
   );
 
-  //6. fragment shader에 제공할 uniform texture 데이터 생성
-  const texture = gl.createTexture();
-  gl.bindTexture(gl.TEXTURE_2D, texture);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-
-  //7. Initial Rendering
   gl.useProgram(my_program);
 
   const loc_a_position = gl.getAttribLocation(my_program, "a_position");
@@ -93,13 +61,24 @@ image.onload = () => {
   gl.bindBuffer(gl.ARRAY_BUFFER, buf_a_position);
   gl.vertexAttribPointer(loc_a_position, 2, gl.FLOAT, false, 0, 0);
 
-  const loc_a_tex_coord = gl.getAttribLocation(my_program, "a_tex_coord");
-  gl.enableVertexAttribArray(loc_a_tex_coord);
-  gl.bindBuffer(gl.ARRAY_BUFFER, buf_a_tex_coord);
-  gl.vertexAttribPointer(loc_a_tex_coord, 2, gl.FLOAT, false, 0, 0);
+  const loc_u_offset_x = gl.getUniformLocation(my_program, "u_offset_x");
+  const loc_u_offset_y = gl.getUniformLocation(my_program, "u_offset_y");
 
-  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
+  gl.uniform1f(loc_u_offset_x, 0.0);
+  gl.uniform1f(loc_u_offset_y, 0.0);
+
   gl.viewport(0, 0, width, height);
 
-  gl.drawArrays(gl.TRIANGLES, 0, 6);
+  gl.drawArrays(gl.TRIANGLES, 0, 3);
+
+  slider_offset_x_el.addEventListener("input", (e) => {
+    const val = Number(e.currentTarget.value);
+    gl.uniform1f(loc_u_offset_x, val);
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+  });
+  slider_offset_y_el.addEventListener("input", (e) => {
+    const val = Number(e.currentTarget.value);
+    gl.uniform1f(loc_u_offset_y, val);
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+  });
 };

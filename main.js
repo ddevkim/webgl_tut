@@ -4,7 +4,7 @@ const gl = document.getElementById("webgl_canvas").getContext("webgl");
 const slider_gl = document.getElementById("webgl_slider");
 
 const image = new Image();
-image.src = "lake.jpg";
+image.src = "maca.jpg";
 image.onload = () => {
   const width = image.width;
   const height = image.height;

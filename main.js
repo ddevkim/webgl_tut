@@ -159,5 +159,6 @@ image.onload = () => {
   slider_gl.addEventListener("input", (e) => {
     const val = Number(e.currentTarget.value) + 1;
     gl.uniform1f(loc_u_brightness, val);
+    gl.drawArrays(gl.TRIANGLES, 0, 6);
   });
 };

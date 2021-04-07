@@ -29,15 +29,15 @@ image.onload = () => {
   //language="glsl"
   const fragment_shader_src = `
       precision mediump float;
-      uniform mat4 u_mat_hue;
-      uniform vec4 u_vec_hue;
+      uniform mat4 u_mat_saturation;
+      uniform vec4 u_vec_saturation;
       uniform sampler2D u_image;
       varying vec2 v_tex_coord;
     void main() {
         vec4 image = texture2D(u_image, v_tex_coord);
         
         //matrix 연산
-        gl_FragColor = vec4(image * u_mat_hue + u_vec_hue);
+        gl_FragColor = vec4(image * u_mat_saturation + u_vec_saturation);
     }
   `;
 
@@ -91,31 +91,32 @@ image.onload = () => {
   gl.bindBuffer(gl.ARRAY_BUFFER, buf_a_tex_coord);
   gl.vertexAttribPointer(loc_a_tex_coord, 2, gl.FLOAT, false, 0, 0);
 
-  const loc_u_mat_hue = gl.getUniformLocation(my_program, "u_mat_hue");
-  const loc_u_vec_hue = gl.getUniformLocation(my_program, "u_vec_hue");
+  const loc_u_mat_saturation = gl.getUniformLocation(
+    my_program,
+    "u_mat_saturation"
+  );
+  const loc_u_vec_saturation = gl.getUniformLocation(
+    my_program,
+    "u_vec_saturation"
+  );
 
   //prettier-ignore
-  const get_hue_mat = (angle) => {
-    angle *= 360;
-    const rotation = angle / 180 * Math.PI;
-    const x = Math.cos(rotation);
-    const y = Math.sin(rotation);
-    const RC = 0.213;
-    const GC = 0.715;
-    const BC = 0.072;
+  const get_saturation_mat = (s) => {
+    const x = s * 2 / 3 + 1;
+    const y = ((1 - x) / 2);
     return new Float32Array([
-      RC + x * (1 - RC) + y * (-RC), GC + x * (-GC) + y * (-GC), BC + x * (-BC) + y * (1 - BC), 0,
-      RC + x * (-RC) + y * 0.143, GC + x * (1 - GC) + y * 0.14, BC + x * (-BC) + y * -0.283, 0,
-      RC + x * (-RC) + y * (RC - 1), GC + x * (-GC) + y * (GC), BC + x * (1 - BC) + y * BC, 0,
+      x, y, y, 0,
+      y, x, y, 0,
+      y, y, x, 0,
       0, 0, 0, 1,
     ]);
   }
 
-  const mat_hue_mul = get_hue_mat(0.0);
-  const vec_hue_offset = new Float32Array([0, 0, 0, 0]);
+  const mat_saturation_mul = get_saturation_mat(0.0);
+  const vec_saturation_offset = new Float32Array([0, 0, 0, 0]);
 
-  gl.uniformMatrix4fv(loc_u_mat_hue, false, mat_hue_mul);
-  gl.uniform4fv(loc_u_vec_hue, vec_hue_offset);
+  gl.uniformMatrix4fv(loc_u_mat_saturation, false, mat_saturation_mul);
+  gl.uniform4fv(loc_u_vec_saturation, vec_saturation_offset);
 
   gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
 
@@ -125,7 +126,7 @@ image.onload = () => {
 
   slider_gl.addEventListener("input", (e) => {
     const str = Number(e.currentTarget.value);
-    gl.uniformMatrix4fv(loc_u_mat_hue, false, get_hue_mat(str));
+    gl.uniformMatrix4fv(loc_u_mat_saturation, false, get_saturation_mat(str));
     gl.drawArrays(gl.TRIANGLES, 0, 6);
   });
 };
